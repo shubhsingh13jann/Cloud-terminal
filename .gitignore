@@ -1,0 +1,82 @@
+# ===========================
+# Dependencies
+# ===========================
+node_modules/
+frontend/node_modules/
+backend/node_modules/
+
+# ===========================
+# Environment Variables
+# ===========================
+.env
+.env.local
+.env.development
+.env.production
+backend/.env
+frontend/.env
+
+# ===========================
+# Build Output
+# ===========================
+dist/
+dist-ssr/
+frontend/dist/
+build/
+*.local
+
+# ===========================
+# Logs
+# ===========================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ===========================
+# Docker
+# ===========================
+docker/data/
+docker/volumes/
+
+# ===========================
+# Database
+# ===========================
+data/
+mongo-data/
+redis-data/
+
+# ===========================
+# OS Files
+# ===========================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ===========================
+# Editor
+# ===========================
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ===========================
+# Testing
+# ===========================
+coverage/
+.nyc_output/
+
+# ===========================
+# Misc
+# ===========================
+*.local
+*.pem
+*.key
+*.cert
