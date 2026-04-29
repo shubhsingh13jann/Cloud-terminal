@@ -1,0 +1,80 @@
+import express from 'express'
+import http from 'http'
+import cors from 'cors'
+import helmet from 'helmet'
+import cookieParser from 'cookie-parser'
+import env from './src/config/env.js'
+import logger from './src/config/logger.js'
+import errorMiddleware from './src/middleware/error.middleware.js'
+
+// Initialize Express app
+const app = express()
+
+// Create HTTP server
+const server = http.createServer(app)
+
+// ===========================
+// Global Middleware
+// ===========================
+
+// Security headers
+app.use(helmet())
+
+// CORS — allow frontend to talk to backend
+app.use(
+  cors({
+    origin: env.CLIENT_URL,
+    credentials: true,
+  })
+)
+
+// Parse JSON request bodies
+app.use(express.json())
+
+// Parse URL encoded bodies
+app.use(express.urlencoded({ extended: true }))
+
+// Parse cookies
+app.use(cookieParser())
+
+// ===========================
+// Routes
+// ===========================
+
+// Health check route — to verify server is running
+app.get('/api/health', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'Cloud Terminal API is running ✅',
+    environment: env.NODE_ENV,
+    timestamp: new Date().toISOString(),
+  })
+})
+
+// 404 handler — route not found
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `Route ${req.originalUrl} not found`,
+  })
+})
+
+// Global error handler — must be last
+app.use(errorMiddleware)
+
+// ===========================
+// Start Server
+// ===========================
+server.listen(env.PORT, () => {
+  logger.info(`🚀 Server running on port ${env.PORT}`)
+  logger.info(`📡 Environment: ${env.NODE_ENV}`)
+  logger.info(`🌐 Health check: http://localhost:${env.PORT}/api/health`)
+})
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (err) => {
+  logger.error(`Unhandled Rejection: ${err.message}`)
+  server.close(() => process.exit(1))
+})
+
+export default server
