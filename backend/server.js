@@ -6,6 +6,7 @@ import cookieParser from 'cookie-parser'
 import env from './src/config/env.js'
 import logger from './src/config/logger.js'
 import errorMiddleware from './src/middleware/error.middleware.js'
+import connectDB from './src/config/db.js'
 
 // Initialize Express app
 const app = express()
@@ -65,16 +66,29 @@ app.use(errorMiddleware)
 // ===========================
 // Start Server
 // ===========================
-server.listen(env.PORT, () => {
-  logger.info(`🚀 Server running on port ${env.PORT}`)
-  logger.info(`📡 Environment: ${env.NODE_ENV}`)
-  logger.info(`🌐 Health check: http://localhost:${env.PORT}/api/health`)
-})
+const startServer = async () => {
+  try {
+    // Connect to MongoDB first
+    await connectDB()
+
+    // Then start the server
+    server.listen(env.PORT, () => {
+      logger.info(`🚀 Server running on port ${env.PORT}`)
+      logger.info(`📡 Environment: ${env.NODE_ENV}`)
+      logger.info(`🌐 Health check: http://localhost:${env.PORT}/api/health`)
+    })
+  } catch (error) {
+    logger.error(`❌ Failed to start server: ${error.message}`)
+    process.exit(1)
+  }
+}
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err) => {
   logger.error(`Unhandled Rejection: ${err.message}`)
   server.close(() => process.exit(1))
 })
+
+startServer()
 
 export default server
