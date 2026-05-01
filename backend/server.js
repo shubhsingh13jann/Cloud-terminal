@@ -7,6 +7,7 @@ import env from './src/config/env.js'
 import logger from './src/config/logger.js'
 import errorMiddleware from './src/middleware/error.middleware.js'
 import connectDB from './src/config/db.js'
+import authRoutes from './src/routes/auth.routes.js'
 
 // Initialize Express app
 const app = express()
@@ -51,6 +52,9 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString(),
   })
 })
+
+// Auth routes
+app.use('/api/auth', authRoutes)
 
 // 404 handler — route not found
 app.use((req, res) => {
