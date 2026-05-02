@@ -8,6 +8,7 @@ import logger from './src/config/logger.js'
 import errorMiddleware from './src/middleware/error.middleware.js'
 import connectDB from './src/config/db.js'
 import authRoutes from './src/routes/auth.routes.js'
+import userRoutes from './src/routes/user.routes.js'
 
 // Initialize Express app
 const app = express()
@@ -55,6 +56,9 @@ app.get('/api/health', (req, res) => {
 
 // Auth routes
 app.use('/api/auth', authRoutes)
+
+// User routes
+app.use('/api/users', userRoutes)
 
 // 404 handler — route not found
 app.use((req, res) => {

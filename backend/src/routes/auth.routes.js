@@ -5,12 +5,13 @@ import {
   logout,
   refreshToken,
 } from '../controllers/auth.controller.js'
+import { validate, registerSchema, loginSchema } from '../middleware/validate.middleware.js'
 
 const router = express.Router()
 
-// Public routes
-router.post('/register', register)
-router.post('/login', login)
+// Validation added to register and login
+router.post('/register', validate(registerSchema), register)
+router.post('/login', validate(loginSchema), login)
 router.post('/logout', logout)
 router.post('/refresh', refreshToken)
 
