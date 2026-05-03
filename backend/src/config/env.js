@@ -28,7 +28,11 @@ const env = {
 }
 
 // Validate critical env variables
-const requiredEnvVars = ['JWT_SECRET', 'JWT_REFRESH_SECRET']
+const requiredEnvVars = [
+  'JWT_SECRET',
+  'JWT_REFRESH_SECRET',
+  'MONGO_URI',
+]
 
 requiredEnvVars.forEach((key) => {
   if (!process.env[key]) {

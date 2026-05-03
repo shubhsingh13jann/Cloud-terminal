@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+
+  # ===========================
+  # MongoDB Service
+  # ===========================
+  mongodb:
+    image: mongo:7.0
+    container_name: cloud-terminal-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password123
+      MONGO_INITDB_DATABASE: cloud-terminal
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - cloud-terminal-network
+
+  # ===========================
+  # Redis Service
+  # ===========================
+  redis:
+    image: redis:7.2-alpine
+    container_name: cloud-terminal-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - cloud-terminal-network
+
+  # ===========================
+  # Redis Commander (GUI for Redis)
+  # ===========================
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: cloud-terminal-redis-gui
+    restart: unless-stopped
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    networks:
+      - cloud-terminal-network
+
+# ===========================
+# Volumes — persistent data storage
+# ===========================
+volumes:
+  mongodb_data:
+    driver: local
+  redis_data:
+    driver: local
+
+# ===========================
+# Network
+# ===========================
+networks:
+  cloud-terminal-network:
+    driver: bridge

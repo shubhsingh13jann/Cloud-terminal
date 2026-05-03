@@ -9,6 +9,7 @@ import errorMiddleware from './src/middleware/error.middleware.js'
 import connectDB from './src/config/db.js'
 import authRoutes from './src/routes/auth.routes.js'
 import userRoutes from './src/routes/user.routes.js'
+import './src/services/redis.service.js'
 
 // Initialize Express app
 const app = express()
