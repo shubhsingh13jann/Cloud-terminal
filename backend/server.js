@@ -10,6 +10,7 @@ import connectDB from './src/config/db.js'
 import authRoutes from './src/routes/auth.routes.js'
 import userRoutes from './src/routes/user.routes.js'
 import './src/services/redis.service.js'
+import { apiRateLimiter } from './src/middleware/rateLimit.middleware.js'
 
 // Initialize Express app
 const app = express()
@@ -29,6 +30,8 @@ app.use(
   cors({
     origin: env.CLIENT_URL,
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   })
 )
 
@@ -40,6 +43,9 @@ app.use(express.urlencoded({ extended: true }))
 
 // Parse cookies
 app.use(cookieParser())
+
+// Global API rate limiter
+app.use('/api', apiRateLimiter)
 
 // ===========================
 // Routes
