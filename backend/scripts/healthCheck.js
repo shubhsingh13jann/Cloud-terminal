@@ -12,7 +12,7 @@ console.log('\n🔍 Running health checks...\n')
 
 // ===========================
 // Check API
-// ===========================
+// ===========================z`
 const checkAPI = () => {
   return new Promise((resolve) => {
     const req = http.get('http://localhost:5000/api/health', (res) => {
