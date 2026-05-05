@@ -11,6 +11,7 @@ import authRoutes from './src/routes/auth.routes.js'
 import userRoutes from './src/routes/user.routes.js'
 import './src/services/redis.service.js'
 import { apiRateLimiter } from './src/middleware/rateLimit.middleware.js'
+import { initSocket } from './src/socket/index.js'
 
 // Initialize Express app
 const app = express()
@@ -91,6 +92,9 @@ const startServer = async () => {
       logger.info(`🚀 Server running on port ${env.PORT}`)
       logger.info(`📡 Environment: ${env.NODE_ENV}`)
       logger.info(`🌐 Health check: http://localhost:${env.PORT}/api/health`)
+
+      // Initialize Socket.io AFTER server starts
+      initSocket(server)
     })
   } catch (error) {
     logger.error(`❌ Failed to start server: ${error.message}`)
