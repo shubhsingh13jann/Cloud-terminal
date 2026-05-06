@@ -8,14 +8,20 @@ import logger from '../config/logger.js'
 // @desc    Register new user
 // @access  Public
 // ===========================
+const createHttpError = (res, status, message) => {
+  res.status(status)
+  const err = new Error(message)
+  err.statusCode = status
+  return err
+}
+
 export const register = asyncHandler(async (req, res) => {
   const { name, email, password } = req.body
 
   // Check if user already exists
   const existingUser = await User.findOne({ email })
   if (existingUser) {
-    res.status(400)
-    throw new Error('User with this email already exists')
+    throw createHttpError(res, 400, 'User with this email already exists')
   }
 
   // Create new user — password auto hashed by pre-save hook
@@ -59,28 +65,24 @@ export const login = asyncHandler(async (req, res) => {
 
   // Validate input
   if (!email || !password) {
-    res.status(400)
-    throw new Error('Email and password are required')
+    throw createHttpError(res, 400, 'Email and password are required')
   }
 
   // Find user — explicitly select password since select:false
   const user = await User.findOne({ email }).select('+password')
   if (!user) {
-    res.status(401)
-    throw new Error('Invalid email or password')
+    throw createHttpError(res, 401, 'Invalid email or password')
   }
 
   // Check if account is active
   if (!user.isActive) {
-    res.status(401)
-    throw new Error('Account is deactivated. Contact support.')
+    throw createHttpError(res, 401, 'Account is deactivated. Contact support.')
   }
 
   // Compare passwords
   const isPasswordCorrect = await user.comparePassword(password)
   if (!isPasswordCorrect) {
-    res.status(401)
-    throw new Error('Invalid email or password')
+    throw createHttpError(res, 401, 'Invalid email or password')
   }
 
   // Generate new tokens
@@ -147,8 +149,7 @@ export const refreshToken = asyncHandler(async (req, res) => {
   const { refreshToken } = req.cookies
 
   if (!refreshToken) {
-    res.status(401)
-    throw new Error('No refresh token found')
+    throw createHttpError(res, 401, 'No refresh token found')
   }
 
   // Verify refresh token
@@ -161,15 +162,15 @@ export const refreshToken = asyncHandler(async (req, res) => {
   }).select('+refreshToken')
 
   if (!user) {
-    res.status(401)
-    throw new Error('Invalid refresh token')
+    throw createHttpError(res, 401, 'Invalid refresh token')
   }
 
   // Generate new access token
   const { accessToken, refreshToken: newRefreshToken } = generateTokens(user._id)
 
-  // Update refresh token in DB
+  // Rotate refresh token and track last activity
   user.refreshToken = newRefreshToken
+  user.lastLogin = new Date()
   await user.save({ validateBeforeSave: false })
 
   // Update cookie

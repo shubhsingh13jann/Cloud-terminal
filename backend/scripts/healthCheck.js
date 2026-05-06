@@ -42,14 +42,14 @@ const checkAPI = () => {
 const checkMongoDB = async () => {
   try {
     await mongoose.connect(
-      'mongodb://admin:password123@localhost:27017/cloud-terminal?authSource=admin',
+      'mongodb://admin:password123@localhost:27018/cloud-terminal?authSource=admin',
       { serverSelectionTimeoutMS: 3000 }
     )
     checks.mongodb = true
-    console.log('✅ MongoDB     — Connected on port 27017')
+    console.log('✅ MongoDB     — Connected on port 27018')
     await mongoose.disconnect()
   } catch {
-    console.log('❌ MongoDB     — Not running on port 27017')
+    console.log('❌ MongoDB     — Not running on port 27018')
   }
 }
 

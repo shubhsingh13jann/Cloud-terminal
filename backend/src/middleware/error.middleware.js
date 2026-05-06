@@ -4,8 +4,8 @@ const errorMiddleware = (err, req, res, next) => {
   // Log the error
   logger.error(`${err.message} - ${req.method} ${req.originalUrl}`)
 
-  // Default error values
-  let statusCode = err.statusCode || 500
+  // Default error values — prefer err.statusCode, fall back to already-set res.statusCode, then 500
+  let statusCode = err.statusCode || (res.statusCode !== 200 ? res.statusCode : 500)
   let message = err.message || 'Internal Server Error'
 
   // Mongoose duplicate key error

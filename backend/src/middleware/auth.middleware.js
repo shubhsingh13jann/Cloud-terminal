@@ -19,8 +19,9 @@ export const protect = asyncHandler(async (req, res, next) => {
 
   // No token found
   if (!token) {
-    res.status(401)
-    throw new Error('Access denied. No token provided.')
+    const err = new Error('Access denied. No token provided.')
+    err.statusCode = 401
+    throw err
   }
 
   // Verify token
@@ -30,13 +31,15 @@ export const protect = asyncHandler(async (req, res, next) => {
   const user = await User.findById(decoded.id)
 
   if (!user) {
-    res.status(401)
-    throw new Error('User no longer exists')
+    const err = new Error('User no longer exists')
+    err.statusCode = 401
+    throw err
   }
 
   if (!user.isActive) {
-    res.status(401)
-    throw new Error('Account is deactivated')
+    const err = new Error('Account is deactivated')
+    err.statusCode = 401
+    throw err
   }
 
   // Attach user to request object
