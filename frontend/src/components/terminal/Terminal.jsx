@@ -5,12 +5,13 @@ import useSocket from '../../hooks/useSocket.js'
 import { addSession } from '../../features/terminal/terminalSlice.js'
 import { SOCKET_EVENTS } from '../../utils/constants.js'
 
-const Terminal = ({ containerId = null }) => {
+const Terminal = ({ containerId = null, sessionId: propSessionId = null }) => {
   const dispatch = useDispatch()
   const containerRef = useRef(null)
+  const sessionIdRef = useRef(propSessionId)
   const { connect, getSocket } = useSocket()
 
-  // Handle user input — send to server
+  // Send input to server
   const handleInput = useCallback((data) => {
     const socket = getSocket()
     if (socket?.connected) {
@@ -18,23 +19,32 @@ const Terminal = ({ containerId = null }) => {
     }
   }, [getSocket])
 
-  // Initialize terminal
-  const { writeToTerminal, getDimensions, focusTerminal } = useTerminal(
-    containerRef,
-    handleInput
-  )
+  // Send resize to server
+  const handleResize = useCallback(({ cols, rows }) => {
+    const socket = getSocket()
+    if (socket?.connected && sessionIdRef.current) {
+      socket.emit(SOCKET_EVENTS.TERMINAL_RESIZE, { cols, rows })
+    }
+  }, [getSocket])
+
+  const {
+    writeToTerminal,
+    getDimensions,
+    focusTerminal,
+    fitTerminal,
+  } = useTerminal(containerRef, handleInput, handleResize)
 
   useEffect(() => {
-    // Connect socket
     const socket = connect()
-
-    // Request new terminal from server
     const { cols, rows } = getDimensions()
+
+    // Request new terminal
     socket.emit(
       SOCKET_EVENTS.TERMINAL_CREATE,
       { cols, rows, containerId },
       (response) => {
-        if (response.success) {
+        if (response?.success) {
+          sessionIdRef.current = response.sessionId
           dispatch(addSession({
             sessionId: response.sessionId,
             containerId,
@@ -45,31 +55,34 @@ const Terminal = ({ containerId = null }) => {
       }
     )
 
-    // Receive output from server → write to terminal
+    // Receive output
     socket.on(SOCKET_EVENTS.TERMINAL_OUTPUT, (data) => {
       writeToTerminal(data)
     })
 
-    // Handle terminal exit
+    // Terminal process exited
     socket.on(SOCKET_EVENTS.TERMINAL_EXIT, ({ exitCode }) => {
-      writeToTerminal(`\r\n\x1b[31mTerminal exited with code ${exitCode}\x1b[0m\r\n`)
+      writeToTerminal(
+        `\r\n\x1b[33m[Process exited with code ${exitCode}]\x1b[0m\r\n`
+      )
     })
 
-    // Cleanup
     return () => {
       socket.off(SOCKET_EVENTS.TERMINAL_OUTPUT)
       socket.off(SOCKET_EVENTS.TERMINAL_EXIT)
-      socket.emit(SOCKET_EVENTS.TERMINAL_KILL)
+      if (sessionIdRef.current) {
+        socket.emit(SOCKET_EVENTS.TERMINAL_KILL)
+      }
     }
   }, [])
 
   return (
-    <div className="w-full h-full bg-[#1e1e1e] rounded-lg overflow-hidden">
-      {/* Terminal container */}
+    <div className="w-full h-full bg-[#1e1e1e] rounded-b-lg overflow-hidden">
       <div
         ref={containerRef}
-        className="w-full h-full p-2"
+        className="w-full h-full p-1"
         style={{ minHeight: '400px' }}
+        onClick={focusTerminal}
       />
     </div>
   )
