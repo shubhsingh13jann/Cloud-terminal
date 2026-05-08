@@ -31,7 +31,6 @@ const Terminal = ({ containerId = null, sessionId: propSessionId = null }) => {
     writeToTerminal,
     getDimensions,
     focusTerminal,
-    fitTerminal,
   } = useTerminal(containerRef, handleInput, handleResize)
 
   useEffect(() => {
@@ -45,11 +44,13 @@ const Terminal = ({ containerId = null, sessionId: propSessionId = null }) => {
       (response) => {
         if (response?.success) {
           sessionIdRef.current = response.sessionId
-          dispatch(addSession({
-            sessionId: response.sessionId,
-            containerId,
-            createdAt: new Date().toISOString(),
-          }))
+          if (!propSessionId) {
+            dispatch(addSession({
+              sessionId: response.sessionId,
+              containerId,
+              createdAt: new Date().toISOString(),
+            }))
+          }
           focusTerminal()
         }
       }

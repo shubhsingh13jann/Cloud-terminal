@@ -1,28 +1,37 @@
-import { useState, useCallback } from 'react'
-import { useSelector, useDispatch } from 'react-redux'
+import { useCallback, useEffect } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
 import Terminal from '../components/terminal/Terminal.jsx'
 import TerminalTabs from '../components/terminal/TerminalTabs.jsx'
 import TerminalToolbar from '../components/terminal/TerminalToolbar.jsx'
+import useSocket from '../hooks/useSocket.js'
 import {
+  addSession,
   selectSessions,
   selectActiveSessionId,
 } from '../features/terminal/terminalSlice.js'
 
 const TerminalPage = () => {
+  const dispatch = useDispatch()
   const sessions = useSelector(selectSessions)
   const activeSessionId = useSelector(selectActiveSessionId)
-  const [terminalKey, setTerminalKey] = useState(0)
-  const [fontSize, setFontSize] = useState(14)
-  const [clearSignal, setClearSignal] = useState(0)
+  const { connect } = useSocket()
+
+  useEffect(() => {
+    connect()
+  }, [connect])
 
   // Open new terminal tab
   const handleNewTab = useCallback(() => {
-    setTerminalKey(prev => prev + 1)
-  }, [])
+    dispatch(addSession({
+      sessionId: `pending-${Date.now()}`,
+      containerId: null,
+      createdAt: new Date().toISOString(),
+    }))
+  }, [dispatch])
 
   // Clear active terminal
   const handleClear = useCallback(() => {
-    setClearSignal(prev => prev + 1)
+    // Terminal clear wiring coming with toolbar command handling.
   }, [])
 
   // AI Assist placeholder
@@ -36,7 +45,7 @@ const TerminalPage = () => {
       {/* Toolbar */}
       <TerminalToolbar
         onClear={handleClear}
-        onFontSizeChange={setFontSize}
+        onFontSizeChange={() => {}}
         onAiAssist={handleAiAssist}
       />
 
@@ -77,6 +86,7 @@ const TerminalPage = () => {
               >
                 <Terminal
                   key={session.sessionId}
+                  sessionId={session.sessionId}
                   containerId={session.containerId}
                 />
               </div>
