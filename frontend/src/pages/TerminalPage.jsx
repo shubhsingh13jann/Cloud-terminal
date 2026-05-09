@@ -1,38 +1,39 @@
-import { useCallback, useEffect } from 'react'
-import { useDispatch, useSelector } from 'react-redux'
+import { useState, useCallback, useEffect } from 'react'
+import { useSelector, useDispatch } from 'react-redux'
 import Terminal from '../components/terminal/Terminal.jsx'
 import TerminalTabs from '../components/terminal/TerminalTabs.jsx'
 import TerminalToolbar from '../components/terminal/TerminalToolbar.jsx'
-import useSocket from '../hooks/useSocket.js'
 import {
-  addSession,
   selectSessions,
   selectActiveSessionId,
+  addSession,
 } from '../features/terminal/terminalSlice.js'
+
+// Unique ID generator
+const generateTempId = () => `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`
 
 const TerminalPage = () => {
   const dispatch = useDispatch()
   const sessions = useSelector(selectSessions)
   const activeSessionId = useSelector(selectActiveSessionId)
-  const { connect } = useSocket()
+  const [fontSize, setFontSize] = useState(14)
 
+  // Open first terminal automatically on page load
   useEffect(() => {
-    connect()
-  }, [connect])
+    if (sessions.length === 0) {
+      handleNewTab()
+    }
+  }, [])
 
   // Open new terminal tab
   const handleNewTab = useCallback(() => {
+    const tempId = generateTempId()
     dispatch(addSession({
-      sessionId: `pending-${Date.now()}`,
+      sessionId: tempId,
       containerId: null,
       createdAt: new Date().toISOString(),
     }))
   }, [dispatch])
-
-  // Clear active terminal
-  const handleClear = useCallback(() => {
-    // Terminal clear wiring coming with toolbar command handling.
-  }, [])
 
   // AI Assist placeholder
   const handleAiAssist = useCallback(() => {
@@ -40,60 +41,43 @@ const TerminalPage = () => {
   }, [])
 
   return (
-    <div className="min-h-screen bg-gray-900 flex flex-col">
+    <div className="h-screen bg-gray-900 flex flex-col overflow-hidden">
 
       {/* Toolbar */}
       <TerminalToolbar
-        onClear={handleClear}
-        onFontSizeChange={() => {}}
+        onFontSizeChange={setFontSize}
         onAiAssist={handleAiAssist}
       />
 
       {/* Tabs */}
       <TerminalTabs onNewTab={handleNewTab} />
 
-      {/* Terminal Area */}
-      <div className="flex-1 p-2 overflow-hidden">
+      {/* Terminal Area — takes remaining height */}
+      <div className="flex-1 overflow-hidden min-h-0">
         {sessions.length === 0 ? (
-          // No sessions — show welcome screen
           <div className="w-full h-full flex items-center justify-center">
             <div className="text-center">
               <p className="text-4xl mb-4">☁️</p>
-              <h2 className="text-white text-xl font-bold mb-2">
-                Cloud Terminal
-              </h2>
-              <p className="text-gray-400 text-sm mb-6">
-                Click + to open a new terminal
-              </p>
-              <button
-                onClick={handleNewTab}
-                className="bg-green-500 hover:bg-green-400 text-white px-6 py-2 rounded-lg font-mono transition-colors"
-              >
-                + New Terminal
-              </button>
+              <p className="text-gray-400 text-sm">Opening terminal...</p>
             </div>
           </div>
         ) : (
-          // Show active terminal
-          <div className="w-full h-full">
-            {sessions.map((session) => (
-              <div
+          sessions.map((session) => (
+            <div
+              key={session.sessionId}
+              style={{ height: '100%' }}
+              className={
+                activeSessionId === session.sessionId ? 'block' : 'hidden'
+              }
+            >
+              <Terminal
                 key={session.sessionId}
-                className={`w-full h-full ${
-                  activeSessionId === session.sessionId ? 'block' : 'hidden'
-                }`}
-                style={{ height: 'calc(100vh - 120px)' }}
-              >
-                <Terminal
-                  key={session.sessionId}
-                  sessionId={session.sessionId}
-                  containerId={session.containerId}
-                  clearSignal={clearSignal}
-                  fontSize={fontSize}
-                />
-              </div>
-            ))}
-          </div>
+                sessionId={session.sessionId}
+                containerId={session.containerId}
+                fontSize={fontSize}
+              />
+            </div>
+          ))
         )}
       </div>
     </div>

@@ -33,7 +33,10 @@ export const createPtySession = (sessionId, options = {}) => {
         ...process.env,
         TERM: 'xterm-color',
         COLORTERM: 'truecolor',
+        FORCE_COLOR: '1',
       },
+      // Add this for Windows to improve performance and compatibility
+      useConpty: false,  
     })
 
     // Store session

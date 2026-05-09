@@ -20,13 +20,11 @@ export const registerTerminalHandlers = (io, socket) => {
     try {
       const sessionId = `${socket.userId}-${Date.now()}`
 
-      // Create PTY process
       const ptyProcess = createPtySession(sessionId, {
         cols: options?.cols || 80,
         rows: options?.rows || 24,
       })
 
-      // Save session to MongoDB
       await Session.create({
         sessionId,
         userId: socket.userId,
@@ -34,19 +32,14 @@ export const registerTerminalHandlers = (io, socket) => {
         status: 'active',
       })
 
-      // Join socket room for this session
       socket.join(sessionId)
       socket.currentSessionId = sessionId
 
-      // ===========================
-      // PTY → Socket (output)
-      // When shell produces output → send to browser
-      // ===========================
+      // PTY output → send to browser
       ptyProcess.onData((data) => {
         socket.emit('terminal:output', data)
       })
 
-      // Handle PTY exit
       ptyProcess.onExit(({ exitCode }) => {
         logger.info(`PTY exited: ${sessionId} — Code: ${exitCode}`)
         socket.emit('terminal:exit', { exitCode })
@@ -55,8 +48,13 @@ export const registerTerminalHandlers = (io, socket) => {
 
       logger.info(`Terminal created: ${sessionId}`)
 
-      // Send success back to client
+      // Send success callback FIRST
       if (callback) callback({ success: true, sessionId })
+
+      // Then write welcome message to trigger prompt
+      setTimeout(() => {
+        ptyProcess.write('')  // Empty write triggers shell prompt
+      }, 100)
 
     } catch (error) {
       logger.error(`terminal:create error: ${error.message}`)

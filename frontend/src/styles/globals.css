@@ -1,0 +1,12 @@
+/* Fix xterm.js height */
+.xterm {
+  height: 100% !important;
+}
+
+.xterm-viewport {
+  overflow-y: auto !important;
+}
+
+.xterm-screen {
+  width: 100% !important;
+}
