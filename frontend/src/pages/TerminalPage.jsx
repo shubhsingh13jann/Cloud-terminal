@@ -88,6 +88,8 @@ const TerminalPage = () => {
                   key={session.sessionId}
                   sessionId={session.sessionId}
                   containerId={session.containerId}
+                  clearSignal={clearSignal}
+                  fontSize={fontSize}
                 />
               </div>
             ))}

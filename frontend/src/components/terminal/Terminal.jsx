@@ -31,7 +31,22 @@ const Terminal = ({ containerId = null, sessionId: propSessionId = null }) => {
     writeToTerminal,
     getDimensions,
     focusTerminal,
+    fitTerminal,
+    clearTerminal,
+    changeFontSize,
   } = useTerminal(containerRef, handleInput, handleResize)
+
+  // Change font size when prop changes
+  useEffect(() => {
+    changeFontSize(fontSize)
+  }, [fontSize])
+
+  // Clear terminal when signal changes
+  useEffect(() => {
+    if (clearSignal > 0) {
+      clearTerminal() 
+    }
+  }, [clearSignal])
 
   useEffect(() => {
     const socket = connect()
