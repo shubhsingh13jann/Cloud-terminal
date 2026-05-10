@@ -8,10 +8,10 @@ const env = {
   NODE_ENV: process.env.NODE_ENV || 'development',
 
   // MongoDB
-  MONGO_URI: process.env.MONGO_URI || 'mongodb://localhost:27017/cloud-terminal',
+  MONGO_URI: process.env.MONGO_URI || 'mongodb://127.0.0.1:27018/cloud-terminal?authSource=admin',
 
   // Redis
-  REDIS_HOST: process.env.REDIS_HOST || 'localhost',
+  REDIS_HOST: process.env.REDIS_HOST || '127.0.0.1',
   REDIS_PORT: process.env.REDIS_PORT || 6379,
 
   // JWT

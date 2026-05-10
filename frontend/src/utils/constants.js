@@ -11,10 +11,8 @@ export const SOCKET_EVENTS = {
   // Terminal events
   TERMINAL_CREATE: 'terminal:create',
   TERMINAL_INPUT: 'terminal:input',
-  TERMINAL_OUTPUT: 'terminal:output',
   TERMINAL_RESIZE: 'terminal:resize',
   TERMINAL_KILL: 'terminal:kill',
-  TERMINAL_EXIT: 'terminal:exit',
 
   // Container events
   CONTAINER_STATUS: 'container:status',

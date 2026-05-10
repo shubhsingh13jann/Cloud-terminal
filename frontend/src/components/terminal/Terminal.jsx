@@ -2,29 +2,36 @@ import { useEffect, useRef, useCallback } from 'react'
 import { useDispatch } from 'react-redux'
 import useTerminal from '../../hooks/useTerminal.js'
 import useSocket from '../../hooks/useSocket.js'
-import { removeSession } from '../../features/terminal/terminalSlice.js'
+import { addSession } from '../../features/terminal/terminalSlice.js'
 import { SOCKET_EVENTS } from '../../utils/constants.js'
 
-const Terminal = ({ sessionId: propSessionId, containerId = null, fontSize = 14 }) => {
+const Terminal = ({ containerId = null }) => {
   const dispatch = useDispatch()
   const containerRef = useRef(null)
   const sessionIdRef = useRef(null)
-  const isInitialized = useRef(false)
   const { connect, getSocket } = useSocket()
 
-  // Send input to server
+  // Send input to correct PTY session
   const handleInput = useCallback((data) => {
     const socket = getSocket()
-    if (socket?.connected) {
-      socket.emit(SOCKET_EVENTS.TERMINAL_INPUT, data)
+    if (socket?.connected && sessionIdRef.current) {
+      // Send sessionId with input so server knows which PTY
+      socket.emit(SOCKET_EVENTS.TERMINAL_INPUT, {
+        sessionId: sessionIdRef.current,
+        data,
+      })
     }
   }, [getSocket])
 
-  // Send resize to server
+  // Send resize to correct PTY session
   const handleResize = useCallback(({ cols, rows }) => {
     const socket = getSocket()
     if (socket?.connected && sessionIdRef.current) {
-      socket.emit(SOCKET_EVENTS.TERMINAL_RESIZE, { cols, rows })
+      socket.emit(SOCKET_EVENTS.TERMINAL_RESIZE, {
+        sessionId: sessionIdRef.current,
+        cols,
+        rows,
+      })
     }
   }, [getSocket])
 
@@ -32,73 +39,75 @@ const Terminal = ({ sessionId: propSessionId, containerId = null, fontSize = 14 
     writeToTerminal,
     getDimensions,
     focusTerminal,
-    changeFontSize,
   } = useTerminal(containerRef, handleInput, handleResize)
 
-  // Update font size when prop changes
   useEffect(() => {
-    changeFontSize(fontSize)
-  }, [fontSize, changeFontSize])
-
-  useEffect(() => {
-    // Prevent double initialization in StrictMode
-    if (isInitialized.current) return
-    isInitialized.current = true
-
-    const socket = connect()
-
-    // Small delay to ensure DOM is ready
     const timer = setTimeout(() => {
+      const socket = connect()
+
+      if (!socket) {
+        console.error('❌ Could not connect — no token')
+        return
+      }
+
       const { cols, rows } = getDimensions()
 
-      // Request terminal from server
+      // Create terminal session
       socket.emit(
         SOCKET_EVENTS.TERMINAL_CREATE,
         { cols, rows, containerId },
         (response) => {
           if (response?.success) {
-            sessionIdRef.current = response.sessionId
+            const { sessionId } = response
+            sessionIdRef.current = sessionId
+
+            dispatch(addSession({
+              sessionId,
+              containerId,
+              createdAt: new Date().toISOString(),
+            }))
+
+            // ✅ Listen to UNIQUE event for THIS session only
+            socket.on(`terminal:output:${sessionId}`, (data) => {
+              writeToTerminal(data)
+            })
+
+            socket.on(`terminal:exit:${sessionId}`, ({ exitCode }) => {
+              writeToTerminal(
+                `\r\n\x1b[33m[Process exited with code ${exitCode}]\x1b[0m\r\n`
+              )
+            })
+
             focusTerminal()
           } else {
-            writeToTerminal('\r\n\x1b[31mFailed to create terminal\x1b[0m\r\n')
+            console.error('❌ Terminal create failed:', response?.error)
           }
         }
       )
-    }, 150)
-
-    // Receive output from server
-    const handleOutput = (data) => {
-      writeToTerminal(data)
-    }
-
-    // Handle terminal exit
-    const handleExit = ({ exitCode }) => {
-      writeToTerminal(
-        `\r\n\x1b[33m[Process exited with code ${exitCode}]\x1b[0m\r\n`
-      )
-    }
-
-    socket.on(SOCKET_EVENTS.TERMINAL_OUTPUT, handleOutput)
-    socket.on(SOCKET_EVENTS.TERMINAL_EXIT, handleExit)
+    }, 500)
 
     return () => {
       clearTimeout(timer)
-      socket.off(SOCKET_EVENTS.TERMINAL_OUTPUT, handleOutput)
-      socket.off(SOCKET_EVENTS.TERMINAL_EXIT, handleExit)
-      if (sessionIdRef.current) {
-        socket.emit(SOCKET_EVENTS.TERMINAL_KILL)
+      const socket = getSocket()
+      const sessionId = sessionIdRef.current
+
+      if (socket && sessionId) {
+        // Remove ONLY this session's listeners
+        socket.off(`terminal:output:${sessionId}`)
+        socket.off(`terminal:exit:${sessionId}`)
+
+        // Kill this specific session
+        socket.emit(SOCKET_EVENTS.TERMINAL_KILL, { sessionId })
       }
     }
   }, [])
 
   return (
-    <div
-      className="w-full bg-[#1e1e1e]"
-      style={{ height: '100%' }}
-    >
+    <div className="w-full h-full bg-[#1e1e1e] rounded-b-lg overflow-hidden">
       <div
         ref={containerRef}
-        style={{ height: '100%', width: '100%', padding: '4px' }}
+        className="w-full h-full p-1"
+        style={{ minHeight: '400px' }}
         onClick={focusTerminal}
       />
     </div>

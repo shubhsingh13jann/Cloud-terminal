@@ -1,8 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react'
 import { io } from 'socket.io-client'
-import { useDispatch, useSelector } from 'react-redux'
+import { useDispatch } from 'react-redux'
 import { setConnected } from '../features/terminal/terminalSlice.js'
-import { selectAccessToken } from '../features/auth/authSlice.js'
 import { SOCKET_URL } from '../utils/constants.js'
 
 // Singleton socket instance
@@ -10,19 +9,30 @@ let socketInstance = null
 
 const useSocket = () => {
   const dispatch = useDispatch()
-  const accessToken = useSelector(selectAccessToken)
   const socketRef = useRef(null)
 
-  // Connect to socket
   const connect = useCallback(() => {
+    // If already connected — return existing instance
     if (socketInstance?.connected) return socketInstance
 
+    // Get token directly from localStorage
+    // More reliable than Redux on first render
+    const token = localStorage.getItem('accessToken')
+
+    if (!token) {
+      console.error('❌ No access token — cannot connect socket')
+      return null
+    }
+
+    console.log('🔌 Connecting to socket...')
+
     socketInstance = io(SOCKET_URL, {
-      auth: { token: accessToken },
-      transports: ['websocket'],
+      auth: { token },
+      transports: ['websocket', 'polling'], // fallback to polling if websocket fails
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
+      timeout: 10000,
     })
 
     socketInstance.on('connect', () => {
@@ -36,15 +46,14 @@ const useSocket = () => {
     })
 
     socketInstance.on('connect_error', (error) => {
-      console.error('Socket connection error:', error.message)
+      console.error('❌ Socket error:', error.message)
       dispatch(setConnected(false))
     })
 
     socketRef.current = socketInstance
     return socketInstance
-  }, [accessToken, dispatch])
+  }, [dispatch])
 
-  // Disconnect socket
   const disconnect = useCallback(() => {
     if (socketInstance) {
       socketInstance.disconnect()
@@ -53,14 +62,7 @@ const useSocket = () => {
     }
   }, [dispatch])
 
-  // Get socket instance
   const getSocket = useCallback(() => socketInstance, [])
-
-  useEffect(() => {
-    return () => {
-      // Cleanup on unmount
-    }
-  }, [])
 
   return { connect, disconnect, getSocket }
 }

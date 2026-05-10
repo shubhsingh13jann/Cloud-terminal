@@ -6,6 +6,7 @@ import logger from '../config/logger.js'
 const redis = new Redis({
   host: env.REDIS_HOST,
   port: env.REDIS_PORT,
+  commandTimeout: 3000,
   retryStrategy: (times) => {
     // Retry connection every 2 seconds max 10 times
     if (times > 10) {

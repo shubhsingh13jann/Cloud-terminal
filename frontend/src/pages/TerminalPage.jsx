@@ -1,50 +1,37 @@
-import { useState, useCallback, useEffect } from 'react'
-import { useSelector, useDispatch } from 'react-redux'
+import { useState, useCallback } from 'react'
+import { useSelector } from 'react-redux'
 import Terminal from '../components/terminal/Terminal.jsx'
 import TerminalTabs from '../components/terminal/TerminalTabs.jsx'
 import TerminalToolbar from '../components/terminal/TerminalToolbar.jsx'
 import {
   selectSessions,
   selectActiveSessionId,
-  addSession,
 } from '../features/terminal/terminalSlice.js'
 
-// Unique ID generator
-const generateTempId = () => `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`
-
 const TerminalPage = () => {
-  const dispatch = useDispatch()
   const sessions = useSelector(selectSessions)
   const activeSessionId = useSelector(selectActiveSessionId)
+
+  // Independent tab instances
+  const [tabInstances, setTabInstances] = useState([])
   const [fontSize, setFontSize] = useState(14)
 
-  // Open first terminal automatically on page load
-  useEffect(() => {
-    if (sessions.length === 0) {
-      handleNewTab()
-    }
+  const handleNewTab = useCallback(() => {
+    const newTab = { id: `tab-${Date.now()}` }
+    setTabInstances(prev => [...prev, newTab])
   }, [])
 
-  // Open new terminal tab
-  const handleNewTab = useCallback(() => {
-    const tempId = generateTempId()
-    dispatch(addSession({
-      sessionId: tempId,
-      containerId: null,
-      createdAt: new Date().toISOString(),
-    }))
-  }, [dispatch])
-
-  // AI Assist placeholder
   const handleAiAssist = useCallback(() => {
     alert('AI Assist coming Day 22! 🤖')
   }, [])
 
   return (
-    <div className="h-screen bg-gray-900 flex flex-col overflow-hidden">
-
+    <div className="h-full flex flex-col bg-gray-900"
+      style={{ height: 'calc(100vh - 57px)' }}
+    >
       {/* Toolbar */}
       <TerminalToolbar
+        onClear={() => {}}
         onFontSizeChange={setFontSize}
         onAiAssist={handleAiAssist}
       />
@@ -52,32 +39,49 @@ const TerminalPage = () => {
       {/* Tabs */}
       <TerminalTabs onNewTab={handleNewTab} />
 
-      {/* Terminal Area — takes remaining height */}
-      <div className="flex-1 overflow-hidden min-h-0">
-        {sessions.length === 0 ? (
+      {/* Terminal Area */}
+      <div className="flex-1 overflow-hidden p-2">
+        {tabInstances.length === 0 ? (
           <div className="w-full h-full flex items-center justify-center">
             <div className="text-center">
               <p className="text-4xl mb-4">☁️</p>
-              <p className="text-gray-400 text-sm">Opening terminal...</p>
+              <h2 className="text-white text-xl font-bold mb-2">
+                Cloud Terminal
+              </h2>
+              <p className="text-gray-400 text-sm mb-6">
+                Click + to open a new terminal
+              </p>
+              <button
+                onClick={handleNewTab}
+                className="bg-green-500 hover:bg-green-400 text-white px-6 py-2 rounded-lg font-mono transition-colors"
+              >
+                + New Terminal
+              </button>
             </div>
           </div>
         ) : (
-          sessions.map((session) => (
-            <div
-              key={session.sessionId}
-              style={{ height: '100%' }}
-              className={
-                activeSessionId === session.sessionId ? 'block' : 'hidden'
-              }
-            >
-              <Terminal
-                key={session.sessionId}
-                sessionId={session.sessionId}
-                containerId={session.containerId}
-                fontSize={fontSize}
-              />
-            </div>
-          ))
+          <div
+            className="w-full h-full"
+            style={{ height: 'calc(100vh - 180px)' }}
+          >
+            {tabInstances.map((tab, index) => (
+              <div
+                key={tab.id}
+                className={`w-full h-full ${
+                  // Show tab that matches active session
+                  // or show last tab if no active session
+                  index === tabInstances.length - 1 &&
+                  !activeSessionId
+                    ? 'block'
+                    : sessions[index]?.sessionId === activeSessionId
+                    ? 'block'
+                    : 'hidden'
+                }`}
+              >
+                <Terminal containerId={null} />
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </div>

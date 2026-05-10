@@ -14,13 +14,12 @@ const TerminalTabs = ({ onNewTab }) => {
   const activeSessionId = useSelector(selectActiveSessionId)
   const { getSocket } = useSocket()
 
-  const handleCloseTab = (e, sessionId) => {
-    e.stopPropagation()
+  const handleCloseTab = (event, sessionId) => {
+    event.stopPropagation()
 
-    // Kill terminal on server
     const socket = getSocket()
     if (socket?.connected) {
-      socket.emit(SOCKET_EVENTS.TERMINAL_KILL)
+      socket.emit(SOCKET_EVENTS.TERMINAL_KILL, { sessionId })
     }
 
     dispatch(removeSession(sessionId))
@@ -45,15 +44,15 @@ const TerminalTabs = ({ onNewTab }) => {
           <span className="text-green-400 text-xs">$</span>
           <span>Terminal {index + 1}</span>
           <button
-            onClick={(e) => handleCloseTab(e, session.sessionId)}
+            onClick={(event) => handleCloseTab(event, session.sessionId)}
             className="ml-1 text-gray-500 hover:text-red-400 transition-colors text-xs leading-none"
+            title="Close terminal"
           >
-            ✕
+            x
           </button>
         </div>
       ))}
 
-      {/* New Tab */}
       <button
         onClick={onNewTab}
         className="px-4 py-2 text-gray-400 hover:text-white hover:bg-gray-800 transition-colors text-xl leading-none select-none"

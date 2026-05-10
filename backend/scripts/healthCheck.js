@@ -12,26 +12,36 @@ console.log('\n🔍 Running health checks...\n')
 
 // ===========================
 // Check API
-// ===========================z`
+// ===========================
 const checkAPI = () => {
   return new Promise((resolve) => {
-    const req = http.get('http://localhost:5000/api/health', (res) => {
+    let settled = false
+    const finish = () => {
+      if (!settled) {
+        settled = true
+        resolve()
+      }
+    }
+
+    const req = http.get('http://127.0.0.1:5000/api/health', (res) => {
       if (res.statusCode === 200) {
         checks.api = true
         console.log('✅ API         — Running on port 5000')
       } else {
         console.log('❌ API         — Not responding correctly')
       }
-      resolve()
+      finish()
     })
     req.on('error', () => {
-      console.log('❌ API         — Not running on port 5000')
-      resolve()
+      if (!settled) {
+        console.log('❌ API         — Not running on port 5000')
+      }
+      finish()
     })
     req.setTimeout(3000, () => {
       console.log('❌ API         — Timeout after 3 seconds')
       req.destroy()
-      resolve()
+      finish()
     })
   })
 }
@@ -42,7 +52,7 @@ const checkAPI = () => {
 const checkMongoDB = async () => {
   try {
     await mongoose.connect(
-      'mongodb://admin:password123@localhost:27018/cloud-terminal?authSource=admin',
+      'mongodb://admin:password123@127.0.0.1:27018/cloud-terminal?authSource=admin',
       { serverSelectionTimeoutMS: 3000 }
     )
     checks.mongodb = true
@@ -59,7 +69,7 @@ const checkMongoDB = async () => {
 const checkRedis = async () => {
   return new Promise((resolve) => {
     const redis = new Redis({
-      host: 'localhost',
+      host: '127.0.0.1',
       port: 6379,
       connectTimeout: 3000,
       lazyConnect: true,
@@ -75,6 +85,7 @@ const checkRedis = async () => {
       })
       .catch(() => {
         console.log('❌ Redis       — Not running on port 6379')
+        redis.disconnect()
         resolve()
       })
   })

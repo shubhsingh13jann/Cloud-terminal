@@ -7,15 +7,9 @@ import {
 import Session from '../../models/Session.model.js'
 import logger from '../../config/logger.js'
 
-// ===========================
-// Terminal Event Handler
-// ===========================
 export const registerTerminalHandlers = (io, socket) => {
 
-  // ===========================
   // terminal:create
-  // Client requests a new terminal
-  // ===========================
   socket.on('terminal:create', async (options, callback) => {
     try {
       const sessionId = `${socket.userId}-${Date.now()}`
@@ -32,29 +26,24 @@ export const registerTerminalHandlers = (io, socket) => {
         status: 'active',
       })
 
+      // Join a UNIQUE room for this session
       socket.join(sessionId)
       socket.currentSessionId = sessionId
 
-      // PTY output → send to browser
+      // PTY output → emit ONLY to this session's room
       ptyProcess.onData((data) => {
-        socket.emit('terminal:output', data)
+        // Use sessionId as event name — unique per terminal
+        socket.emit(`terminal:output:${sessionId}`, data)
       })
 
       ptyProcess.onExit(({ exitCode }) => {
         logger.info(`PTY exited: ${sessionId} — Code: ${exitCode}`)
-        socket.emit('terminal:exit', { exitCode })
+        socket.emit(`terminal:exit:${sessionId}`, { exitCode })
         killPtySession(sessionId)
       })
 
       logger.info(`Terminal created: ${sessionId}`)
-
-      // Send success callback FIRST
       if (callback) callback({ success: true, sessionId })
-
-      // Then write welcome message to trigger prompt
-      setTimeout(() => {
-        ptyProcess.write('')  // Empty write triggers shell prompt
-      }, 100)
 
     } catch (error) {
       logger.error(`terminal:create error: ${error.message}`)
@@ -62,54 +51,43 @@ export const registerTerminalHandlers = (io, socket) => {
     }
   })
 
-  // ===========================
-  // terminal:input
-  // Client types something → send to shell
-  // ===========================
-  socket.on('terminal:input', (data) => {
-    const ptyProcess = getPtySession(socket.currentSessionId)
+  // terminal:input — use sessionId to find correct PTY
+  socket.on('terminal:input', ({ sessionId, data }) => {
+    const ptyProcess = getPtySession(sessionId)
     if (ptyProcess) {
       ptyProcess.write(data)
     }
   })
 
-  // ===========================
   // terminal:resize
-  // Browser terminal resized → resize PTY
-  // ===========================
-  socket.on('terminal:resize', ({ cols, rows }) => {
-    if (socket.currentSessionId) {
-      resizePty(socket.currentSessionId, cols, rows)
+  socket.on('terminal:resize', ({ sessionId, cols, rows }) => {
+    if (sessionId) {
+      resizePty(sessionId, cols, rows)
     }
   })
 
-  // ===========================
   // terminal:kill
-  // Client closes terminal
-  // ===========================
-  socket.on('terminal:kill', async () => {
-    if (socket.currentSessionId) {
-      killPtySession(socket.currentSessionId)
-
-      // Update session status in DB
+  socket.on('terminal:kill', async ({ sessionId }) => {
+    if (sessionId) {
+      killPtySession(sessionId)
       await Session.findOneAndUpdate(
-        { sessionId: socket.currentSessionId },
+        { sessionId },
         { status: 'closed', endedAt: new Date() }
       )
-
-      socket.currentSessionId = null
     }
   })
 
-  // ===========================
-  // Cleanup on disconnect
-  // ===========================
+  // Cleanup on disconnect — kill ALL sessions for this socket
   socket.on('disconnect', async () => {
-    if (socket.currentSessionId) {
-      killPtySession(socket.currentSessionId)
+    const sessions = await Session.find({
+      userId: socket.userId,
+      status: 'active',
+    })
 
+    for (const session of sessions) {
+      killPtySession(session.sessionId)
       await Session.findOneAndUpdate(
-        { sessionId: socket.currentSessionId },
+        { sessionId: session.sessionId },
         { status: 'disconnected', endedAt: new Date() }
       )
     }
